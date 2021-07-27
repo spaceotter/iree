@@ -102,6 +102,62 @@ struct PromoteMatmulSubviewsPattern
                 .setUseFullTileBuffersByDefault(true),
             marker, benefit) {}
 };
+
+struct ConvertVectorContractWithSingleOuterDim
+    : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp vectorContract,
+                                PatternRewriter &rewriter) const override {
+    llvm::outs() << "Running ConvertVectorContractWithSingleOuterDim....\n";
+    if (vectorContract.iterator_types().size() != 6) return failure();
+    auto loc = vectorContract.getLoc();
+
+    auto flattnedVectorType = VectorType::get({4, 4}, rewriter.getF32Type());
+
+    auto unFlattnedVectorType =
+        VectorType::get({1, 1, 4, 4}, rewriter.getF32Type());
+
+    Value flatLhs = rewriter.create<vector::ShapeCastOp>(
+        loc, flattnedVectorType, vectorContract.lhs());
+
+    Value flatRhs = rewriter.create<vector::ShapeCastOp>(
+        loc, flattnedVectorType, vectorContract.rhs());
+
+    Value flatAcc = rewriter.create<vector::ShapeCastOp>(
+        loc, flattnedVectorType, vectorContract.acc());
+
+    auto m = rewriter.getAffineDimExpr(0);
+    auto n = rewriter.getAffineDimExpr(1);
+    auto k = rewriter.getAffineDimExpr(2);
+
+    llvm::outs() << "\n";
+    vectorContract.print(llvm::outs());
+    llvm::outs() << "\n";
+
+    auto map0 = AffineMap::get(3, 0, {m, k}, rewriter.getContext());
+    auto map1 = AffineMap::get(3, 0, {n, k}, rewriter.getContext());
+    auto map2 = AffineMap::get(3, 0, {m, n}, rewriter.getContext());
+
+    ArrayAttr indexingMaps = rewriter.getAffineMapArrayAttr({map0, map1, map2});
+
+    ArrayAttr iterators = rewriter.getStrArrayAttr(
+        {getParallelIteratorTypeName(), getParallelIteratorTypeName(),
+         getReductionIteratorTypeName()});
+
+    Value newContraction = rewriter.create<vector::ContractionOp>(
+        loc, flatLhs, flatRhs, flatAcc, indexingMaps, iterators);
+
+    Value unFlatNewContraction = rewriter.create<vector::ShapeCastOp>(
+        loc, unFlattnedVectorType, newContraction);
+
+    rewriter.replaceOp(vectorContract, {unFlatNewContraction});
+
+    return failure();
+  }
+};
+
+/// vector.contract 6d -> vector.contract 3d
 }  // namespace
 
 namespace {
@@ -221,6 +277,10 @@ void LLVMCPUVectorizationPass::runOnOperation() {
     return;
   }
 
+  llvm::outs() << "Before vectorization:\n";
+  funcOp->print(llvm::outs());
+  llvm::outs() << "\n";
+
   // Apply vectorization patterns.
   {
     RewritePatternSet vectorizationPatterns(context);
@@ -242,6 +302,18 @@ void LLVMCPUVectorizationPass::runOnOperation() {
     if (auto contract = canonicalizeContractionAdd(op))
       op->replaceAllUsesWith(contract);
   });
+
+  {
+    RewritePatternSet patterns(context);
+    patterns.insert<ConvertVectorContractWithSingleOuterDim>(context);
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+      return signalPassFailure();
+    }
+  }
+
+  llvm::outs() << "After vectorization:\n";
+  funcOp->print(llvm::outs());
+  llvm::outs() << "\n";
 
   if (enableVectorContractToAarch64Asm) {
     RewritePatternSet vectorToAArch64AsmPatterns(context);
@@ -270,6 +342,10 @@ void LLVMCPUVectorizationPass::runOnOperation() {
       return signalPassFailure();
     }
   }
+
+  llvm::outs() << "After vector transforms:\n";
+  funcOp->print(llvm::outs());
+  llvm::outs() << "\n";
 
   // Hosit hierarchical tiling indexing and other loop invariant transfer
   // ops computation.

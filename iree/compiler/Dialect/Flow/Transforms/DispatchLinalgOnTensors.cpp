@@ -226,7 +226,8 @@ static bool isRootOp(Operation *op) {
              linalg::DepthwiseConvInputNHWCFilterHWCFOp,
              linalg::PoolingNHWCMaxI8Op, linalg::PoolingNHWCMaxI16Op,
              linalg::PoolingNHWCMaxI32Op, linalg::PoolingNHWCSumFOp,
-             linalg::PoolingNHWCMaxFOp, linalg::PoolingNHWCMinFOp>(op);
+             linalg::Mmt4DOp, linalg::PoolingNHWCMaxFOp,
+             linalg::PoolingNHWCMinFOp>(op);
 }
 
 static bool isAlwaysClonedIntoDispatchOp(Operation *op) {
@@ -1040,6 +1041,9 @@ static unsigned decideFusableLinalgOps(FuncOp funcOp) {
       unsigned newGroup = numRootOps++;
       op->setAttr(kRootOpAttr, builder.getI64IntegerAttr(newGroup));
 
+      // Don't fuse mmt4d with anything
+      if (isa<linalg::Mmt4DOp>(op)) continue;
+
       for (OpOperand *operand : linalgOp.getOutputTensorOperands()) {
         auto producer = operand->get().getDefiningOp<linalg::LinalgOp>();
         if (!producer) continue;
@@ -1127,6 +1131,11 @@ void DispatchLinalgOnTensorsPass::runOnOperation() {
     auto numParallelDims = getNumOuterParallelLoops(cast<linalg::LinalgOp>(op));
     auto numTiledLoops = getNumTilableLoops(cast<linalg::LinalgOp>(op));
 
+    llvm::outs() << "print tileSizeFn Op:\n";
+    op->print(llvm::outs());
+    llvm::outs() << "\ntileSizeFn: numParallelDims=" << numParallelDims
+                 << ", numTiledLoops=" << numTiledLoops << "\n";
+
     // Default to zero to skip tiling.
     auto zero = builder.create<ConstantIndexOp>(op->getLoc(), 0);
     SmallVector<Value, 4> useTileSizes(numParallelDims, zero);
@@ -1148,6 +1157,19 @@ void DispatchLinalgOnTensorsPass::runOnOperation() {
     for (size_t dim = 0; dim < numTiledLoops; ++dim) {
       useTileSizes[numParallelDims - dim - 1] =
           buildFlowWorkgroupInfoOp<Flow::DispatchWorkgroupSizeOp>(builder, dim);
+    }
+    llvm::outs() << "useTileSizes.size():" << useTileSizes.size() << "\n";
+    for (auto tileSize : useTileSizes) {
+      llvm::outs() << tileSize << "\n";
+    }
+    if (isa<linalg::Mmt4DOp>(op)) {
+      llvm::outs() << "get mmt4d op:\n";
+      SmallVector<Value, 4> tileSizes(2);
+      tileSizes[0] =
+          buildFlowWorkgroupInfoOp<Flow::DispatchWorkgroupSizeOp>(builder, 0);
+      tileSizes[1] =
+          buildFlowWorkgroupInfoOp<Flow::DispatchWorkgroupSizeOp>(builder, 1);
+      return tileSizes;
     }
     return useTileSizes;
   };

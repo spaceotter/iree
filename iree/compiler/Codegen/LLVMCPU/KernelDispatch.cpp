@@ -95,6 +95,8 @@ static LogicalResult setTranslationInfo(
 /// implements the contraction operation interface.
 static LogicalResult setRootConfig(
     FuncOp entryPointFn, linalg::ContractionOpInterface contractionOp) {
+  llvm::outs() << "setRootConfig ContractionOpInterface\n";
+
   if (hasLoweringConfig(entryPointFn)) return success();
   if (contractionOp.isRowMajorMatmul()) {
     int mWorkgroupSize = matmulWorkgroupTileSize;
@@ -156,6 +158,22 @@ static LogicalResult setRootConfig(
   return success();
 }
 
+static LogicalResult setRootConfig(FuncOp entryPointFn,
+                                   linalg::Mmt4DOp contractionOp) {
+  llvm::outs() << "setRootConfig linalg::Mmt4DOp\n";
+  // {m1, n1, m0, n0, k1, k0}
+  TileSizesListType tileSizes = {
+      {64, 32}, {32, 32, 32, 4, 4, 4}, {1, 1, 1, 4, 4, 4}};
+  SmallVector<int64_t, 4> nativeVectorSize = {1, 1, 1, 4, 4, 4};
+  IREE::HAL::LoweringConfig config =
+      buildConfigAttr(tileSizes, nativeVectorSize, contractionOp->getContext());
+  setLoweringConfig(contractionOp, config);
+  return setTranslationInfo(
+      entryPointFn, IREE::HAL::DispatchLoweringPassPipeline::CPUVectorization,
+      getWorkloadPerWorkgroup(tileSizes[0]));
+  return success();
+}
+
 /// Legalized the tile sizes for the first-level of tiling
 /// (i.e. workgroup-level) to stay consistent with the distribution done at the
 /// Flow dialect level, where the last `kNumMaxParallelDims` of the outer
@@ -198,6 +216,8 @@ static LogicalResult setRootConfig(FuncOp entryPointFn,
     if (!hasMarker(linalgOp, getWorkgroupMarker())) continue;
     auto status =
         TypeSwitch<Operation *, LogicalResult>(linalgOp.getOperation())
+            .Case<linalg::Mmt4DOp>(
+                [&](auto op) { return setRootConfig(entryPointFn, op); })
             .Case<linalg::ContractionOpInterface>(
                 [&](auto op) { return setRootConfig(entryPointFn, op); })
             .Default([](Operation *) { return success(); });
@@ -240,6 +260,7 @@ static LogicalResult setRootConfig(FuncOp entryPointFn,
 LogicalResult initCPULaunchConfig(ModuleOp moduleOp) {
   llvm::StringMap<IREE::HAL::ExecutableEntryPointOp> entryPointOps =
       getAllEntryPoints(moduleOp);
+  llvm::outs() << "initCPULaunchConfig\n";
   for (auto funcOp : moduleOp.getOps<FuncOp>()) {
     auto entryPointOp = entryPointOps.lookup(funcOp.getName());
     if (!entryPointOp) continue;

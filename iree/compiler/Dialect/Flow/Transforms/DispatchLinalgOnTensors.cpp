@@ -657,6 +657,11 @@ static LogicalResult legalizeDispatchWorkgroupOperands(
 /// order, i.e. starting from the outer-most to innermost.
 static SmallVector<unsigned> getPartitionedLoops(Operation *op) {
   SmallVector<unsigned> partitionedLoops;
+  if (auto mmt4dOp = dyn_cast<linalg::Mmt4DOp>(op)) {
+    // The first two parallel dims are the tiles iterators.
+    // TODO(ataei): Add op interface to get these two indices.
+    return {0, 1};
+  }
   if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
     size_t numOuterParallelLoops = getNumOuterParallelLoops(linalgOp);
     partitionedLoops =

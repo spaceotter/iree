@@ -1,0 +1,37 @@
+// Copyright 2021 The IREE Authors
+//
+// Licensed under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+namespace iree;
+
+// 'HAMMERBLADE Executable'.
+file_identifier "HAMB";
+file_extension "hammerblade";
+
+// A struct for the kernel block size along each dimensions.
+struct HAMMERBLADEBlockSizeDef {
+  x:uint32;
+  y:uint32;
+  z:uint32;
+}
+
+table HAMMERBLADEExecutableDef {
+  // A map of entry point ordinals to string names as used in the shader
+  // library.
+  entry_points:[string];
+
+  // Block sizes for each entry point.
+  //
+  // Currently the thread group size/block size is decided during code gen but
+  // in HAMMERBLADE it is set by the runtime.
+  block_sizes:[HAMMERBLADEBlockSizeDef];
+
+  // PTX string of the module.
+  ptx_image:string;
+  
+  // TODO(thomasraoux): Add potential cuBin binary specialized for some targets.
+}
+
+root_type HAMMERBLADEExecutableDef;

@@ -124,6 +124,7 @@ set(IREE_ALL_HAL_DRIVERS
   DyLib
   VMVX
   Vulkan
+  HammerBlade
 )
 
 if(IREE_HAL_DRIVERS_TO_BUILD STREQUAL "all")

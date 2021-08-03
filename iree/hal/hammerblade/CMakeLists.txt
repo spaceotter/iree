@@ -57,6 +57,9 @@ iree_cc_library(
     iree::hal
     iree::hal::utils::deferred_command_buffer
     iree::schemas::hammerblade_executable_def_c_fbs
+    "${BLADERUNNER_DIR}/bsg_replicant/machines/timing_v0_8_4/libmachine.so"
+    "${BLADERUNNER_DIR}/bsg_replicant/libraries/platforms/dpi-verilator/libbsg_manycore_runtime.so"
+    "${BLADERUNNER_DIR}/bsg_replicant/libraries/features/dma/simulation/libdramsim3.so"
   INCLUDES
     "${BLADERUNNER_DIR}/bsg_replicant/libraries"
   DEFINES

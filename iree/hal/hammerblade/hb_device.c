@@ -1,4 +1,4 @@
-.// Copyright 2021 The IREE Authors
+// Copyright 2021 The IREE Authors
 //
 // Licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,12 +16,11 @@
 #include "iree/hal/hammerblade/descriptor_set_layout.h"
 #include "iree/hal/hammerblade/event_semaphore.h"
 #include "iree/hal/hammerblade/executable_layout.h"
-#include "iree/hal/hammerblade/graph_command_buffer.h"
+#include "iree/hal/hammerblade/stream_command_buffer.h"
 #include "iree/hal/hammerblade/hb_allocator.h"
 #include "iree/hal/hammerblade/hb_event.h"
 #include "iree/hal/hammerblade/nop_executable_cache.h"
 #include "iree/hal/hammerblade/status_util.h"
-#include "iree/hal/hammerblade/stream_command_buffer.h"
 #include "iree/hal/utils/deferred_command_buffer.h"
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +82,7 @@ static void iree_hal_hammerblade_device_destroy(iree_hal_device_t* base_device) 
   // There should be no more buffers live that use the allocator.
   iree_hal_allocator_release(device->device_allocator);
 
-  HAMMERBLADE_IGNORE_ERROR(hb_mc_device_finish(&device->context_wrapper->hb_device));
+  HAMMERBLADE_IGNORE_ERROR(hb_mc_device_finish(&device->context_wrapper.hb_device));
 
   iree_arena_block_pool_deinitialize(&device->block_pool);
   // Finally, destroy the device.
@@ -179,14 +178,9 @@ static iree_status_t iree_hal_hammerblade_device_create_command_buffer(
     iree_hal_queue_affinity_t queue_affinity,
     iree_hal_command_buffer_t** out_command_buffer) {
   iree_hal_hammerblade_device_t* device = iree_hal_hammerblade_device_cast(base_device);
-  if (device->use_deferred_submission) {
-    return iree_hal_deferred_command_buffer_create(
-        mode, command_categories, &device->block_pool,
-        iree_hal_device_host_allocator(base_device), out_command_buffer);
-  }
-  return iree_hal_hammerblade_graph_command_buffer_create(
-      &device->context_wrapper, mode, command_categories, queue_affinity,
-      out_command_buffer);
+  return iree_hal_deferred_command_buffer_create(
+      mode, command_categories, &device->block_pool,
+      iree_hal_device_host_allocator(base_device), out_command_buffer);
 }
 
 static iree_status_t iree_hal_hammerblade_device_create_descriptor_set(
@@ -250,37 +244,22 @@ static iree_status_t iree_hal_hammerblade_device_queue_submit(
     iree_hal_queue_affinity_t queue_affinity, iree_host_size_t batch_count,
     const iree_hal_submission_batch_t* batches) {
   iree_hal_hammerblade_device_t* device = iree_hal_hammerblade_device_cast(base_device);
-  if (device->use_deferred_submission) {
-    iree_hal_command_buffer_t* stream_command_buffer;
-    iree_status_t status = iree_hal_hammerblade_stream_command_buffer_create(
-        &device->context_wrapper,
-        IREE_HAL_COMMAND_BUFFER_MODE_ALLOW_INLINE_EXECUTION, command_categories,
-        device->stream, &stream_command_buffer);
-    if (iree_status_is_ok(status)) {
-      for (int i = 0; i < batch_count; i++) {
-        for (int j = 0; j < batches[i].command_buffer_count; j++) {
-          iree_hal_deferred_command_buffer_apply(batches[i].command_buffers[j],
-                                                 stream_command_buffer);
-        }
-      }
-    }
-    iree_hal_command_buffer_release(stream_command_buffer);
-  } else {
+
+  iree_hal_command_buffer_t* stream_command_buffer;
+  iree_status_t status = iree_hal_hammerblade_stream_command_buffer_create(
+      &device->context_wrapper,
+      IREE_HAL_COMMAND_BUFFER_MODE_ALLOW_INLINE_EXECUTION, command_categories,
+      &stream_command_buffer);
+  if (iree_status_is_ok(status)) {
     for (int i = 0; i < batch_count; i++) {
       for (int j = 0; j < batches[i].command_buffer_count; j++) {
-        CUgraphExec exec = iree_hal_hammerblade_graph_command_buffer_exec(
-            batches[i].command_buffers[j]);
-        CUDA_RETURN_IF_ERROR(device->context_wrapper.syms,
-                             cuGraphLaunch(exec, device->stream),
-                             "cuGraphLaunch");
+        iree_hal_deferred_command_buffer_apply(batches[i].command_buffers[j],
+                                               stream_command_buffer);
       }
     }
   }
-  // TODO(thomasraoux): Conservatively syncronize after every submit until we
-  // support semaphores.
-  CUDA_RETURN_IF_ERROR(device->context_wrapper.syms,
-                       cuStreamSynchronize(device->stream),
-                       "cuStreamSynchronize");
+  iree_hal_command_buffer_release(stream_command_buffer);
+
   return iree_ok_status();
 }
 
@@ -310,11 +289,8 @@ static iree_status_t iree_hal_hammerblade_device_wait_idle(
     iree_hal_device_t* base_device, iree_timeout_t timeout) {
   iree_hal_hammerblade_device_t* device = iree_hal_hammerblade_device_cast(base_device);
   // Wait until the stream is done.
-  // TODO(thomasraoux): HAMMERBLADE doesn't support a deadline for wait, figure out how
-  // to handle it better.
-  HAMMERBLADE_RETURN_IF_ERROR(device->context_wrapper.syms,
-                       cuStreamSynchronize(device->stream),
-                       "cuStreamSynchronize");
+  // TODO(spaceotter): HAMMERBLADE doesn't seem to have a synchronous api, so everything is already
+  // done.
   return iree_ok_status();
 }
 

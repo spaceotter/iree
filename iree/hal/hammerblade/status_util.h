@@ -27,7 +27,7 @@ extern "C" {
 //
 // Usage:
 //   HAMMERBLADE_RETURN_IF_ERROR(cuDoThing(...), "message");
-#define HAMMERBLADE_RETURN_IF_ERROR(syms, expr, ...)                    \
+#define HAMMERBLADE_RETURN_IF_ERROR(expr, ...)                          \
   IREE_RETURN_IF_ERROR(iree_hal_hammerblade_result_to_status((expr),    \
                                                              __FILE__, __LINE__), \
                        __VA_ARGS__)

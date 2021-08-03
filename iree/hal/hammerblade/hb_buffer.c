@@ -17,7 +17,7 @@
 typedef struct iree_hal_hammerblade_buffer_t {
   iree_hal_buffer_t base;
   void* host_ptr;
-  hb_mc_device_t *device_ptr;
+  eva_t device_ptr;
 } iree_hal_hammerblade_buffer_t;
 
 extern const iree_hal_buffer_vtable_t iree_hal_hammerblade_buffer_vtable;
@@ -122,7 +122,7 @@ static iree_status_t iree_hal_hammerblade_buffer_flush_range(
   return iree_ok_status();
 }
 
-hb_mc_device_t *iree_hal_hammerblade_buffer_device_pointer(
+eva_t iree_hal_hammerblade_buffer_device_pointer(
     iree_hal_buffer_t* base_buffer) {
   iree_hal_hammerblade_buffer_t* buffer = iree_hal_hammerblade_buffer_cast(base_buffer);
   return buffer->device_ptr;

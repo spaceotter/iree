@@ -25,7 +25,7 @@ iree_status_t iree_hal_hammerblade_native_executable_create(
     const iree_hal_executable_spec_t* executable_spec,
     iree_hal_executable_t** out_executable);
 
-CUfunction iree_hal_hammerblade_native_executable_for_entry_point(
+const char *iree_hal_hammerblade_native_executable_for_entry_point(
     iree_hal_executable_t* executable, int32_t entry_point);
 
 // Return the block size of the given |entry_point| within the executable.

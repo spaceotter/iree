@@ -23,10 +23,10 @@ typedef struct {
   iree_hal_hammerblade_context_wrapper_t* context;
   iree_hal_command_buffer_mode_t mode;
   iree_hal_command_category_t allowed_categories;
-  CUstream stream;
+
   // Keep track of the current set of kernel arguments.
-  void* current_descriptor[IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT];
-  CUdeviceptr* device_ptrs[IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT];
+  int current_descriptor[IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT];
+  eva_t* device_ptrs[IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT];
 } iree_hal_hammerblade_stream_command_buffer_t;
 
 extern const iree_hal_command_buffer_vtable_t
@@ -42,7 +42,7 @@ iree_hal_hammerblade_stream_command_buffer_cast(
 iree_status_t iree_hal_hammerblade_stream_command_buffer_create(
     iree_hal_hammerblade_context_wrapper_t* context,
     iree_hal_command_buffer_mode_t mode,
-    iree_hal_command_category_t command_categories, CUstream stream,
+    iree_hal_command_category_t command_categories,
     iree_hal_command_buffer_t** out_command_buffer) {
   IREE_ASSERT_ARGUMENT(context);
   IREE_ASSERT_ARGUMENT(out_command_buffer);
@@ -52,7 +52,7 @@ iree_status_t iree_hal_hammerblade_stream_command_buffer_create(
   iree_hal_hammerblade_stream_command_buffer_t* command_buffer = NULL;
   size_t total_size = sizeof(*command_buffer) +
                       IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT * sizeof(void*) +
-                      IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT * sizeof(CUdeviceptr);
+                      IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT * sizeof(eva_t);
   iree_status_t status = iree_allocator_malloc(
       context->host_allocator, total_size, (void**)&command_buffer);
   if (iree_status_is_ok(status)) {
@@ -61,9 +61,9 @@ iree_status_t iree_hal_hammerblade_stream_command_buffer_create(
     command_buffer->context = context;
     command_buffer->mode = mode;
     command_buffer->allowed_categories = command_categories;
-    command_buffer->stream = stream;
+
     for (size_t i = 0; i < IREE_HAL_HAMMERBLADE_MAX_BINDING_COUNT; i++) {
-      command_buffer->current_descriptor[i] = &command_buffer->device_ptrs[i];
+      command_buffer->current_descriptor[i] = *command_buffer->device_ptrs[i];
     }
   }
 
@@ -184,17 +184,16 @@ static iree_status_t iree_hal_hammerblade_stream_command_buffer_fill_buffer(
   iree_hal_hammerblade_stream_command_buffer_t* command_buffer =
       iree_hal_hammerblade_stream_command_buffer_cast(base_command_buffer);
 
-  CUdeviceptr target_device_buffer = iree_hal_hammerblade_buffer_device_pointer(
+  eva_t target_device_buffer = iree_hal_hammerblade_buffer_device_pointer(
       iree_hal_buffer_allocated_buffer(target_buffer));
   target_offset += iree_hal_buffer_byte_offset(target_buffer);
-  uint32_t dword_pattern = iree_hal_hammerblade_splat_pattern(pattern, pattern_length);
-  CUdeviceptr dst = target_device_buffer + target_offset;
-  int value = dword_pattern;
-  size_t sizeBytes = length;
-  HAMMERBLADE_RETURN_IF_ERROR(
-      command_buffer->context->syms,
-      cuMemsetD32Async(dst, value, sizeBytes, command_buffer->stream),
-      "cuMemsetD32Async");
+  eva_t dst = target_device_buffer + target_offset;
+
+  uint8_t value = 0;
+  if (pattern_length > 0) {
+    value = ((uint8_t*)pattern)[pattern_length - 1];
+  }
+  HAMMERBLADE_RETURN_IF_ERROR(hb_mc_device_memset(&command_buffer->context->hb_device, &dst, value, length), "Hammerblade memset");
   return iree_ok_status();
 }
 
@@ -211,20 +210,8 @@ static iree_status_t iree_hal_hammerblade_stream_command_buffer_copy_buffer(
     iree_hal_buffer_t* source_buffer, iree_device_size_t source_offset,
     iree_hal_buffer_t* target_buffer, iree_device_size_t target_offset,
     iree_device_size_t length) {
-  iree_hal_hammerblade_stream_command_buffer_t* command_buffer =
-      iree_hal_hammerblade_stream_command_buffer_cast(base_command_buffer);
-
-  CUdeviceptr target_device_buffer = iree_hal_hammerblade_buffer_device_pointer(
-      iree_hal_buffer_allocated_buffer(target_buffer));
-  target_offset += iree_hal_buffer_byte_offset(target_buffer);
-  CUdeviceptr source_device_buffer = iree_hal_hammerblade_buffer_device_pointer(
-      iree_hal_buffer_allocated_buffer(source_buffer));
-  source_offset += iree_hal_buffer_byte_offset(source_buffer);
-  HAMMERBLADE_RETURN_IF_ERROR(command_buffer->context->syms,
-                       cuMemcpyAsync(target_device_buffer, source_device_buffer,
-                                     length, command_buffer->stream),
-                       "cuMemcpyAsync");
-  return iree_ok_status();
+  return iree_make_status(IREE_STATUS_UNIMPLEMENTED,
+                          "need hammerblade implementation of device to device copy");
 }
 
 static iree_status_t iree_hal_hammerblade_stream_command_buffer_push_constants(
@@ -275,11 +262,11 @@ static iree_status_t iree_hal_hammerblade_stream_command_buffer_push_descriptor_
          "binding count larger than the max expected.");
   for (iree_host_size_t i = 0; i < binding_count; i++) {
     iree_hal_descriptor_set_binding_t binding = bindings[binding_used[i].index];
-    CUdeviceptr device_ptr =
+    eva_t device_ptr =
         iree_hal_hammerblade_buffer_device_pointer(
             iree_hal_buffer_allocated_buffer(binding.buffer)) +
         iree_hal_buffer_byte_offset(binding.buffer) + binding.offset;
-    *((CUdeviceptr*)command_buffer->current_descriptor[i + base_binding]) =
+    command_buffer->current_descriptor[i + base_binding] =
         device_ptr;
   }
   return iree_ok_status();
@@ -305,14 +292,25 @@ static iree_status_t iree_hal_hammerblade_stream_command_buffer_dispatch(
   int32_t block_size_x, block_size_y, block_size_z;
   IREE_RETURN_IF_ERROR(iree_hal_hammerblade_native_executable_block_size(
       executable, entry_point, &block_size_x, &block_size_y, &block_size_z));
-  CUfunction func =
+
+  hb_mc_dimension_t tg_dim = {};
+  hb_mc_dimension_t grid_dim = {};
+
+  const char *func =
       iree_hal_hammerblade_native_executable_for_entry_point(executable, entry_point);
+  HAMMERBLADE_RETURN_IF_ERROR(hb_mc_kernel_enqueue(&command_buffer->context->hb_device, grid_dim, tg_dim, func, 8, command_buffer->current_descriptor), "HB kernel enqueue");
+
+  uint64_t cycle1 = 0;
+  hb_mc_manycore_get_cycle(command_buffer->context->hb_device.mc, &cycle1);
+
   HAMMERBLADE_RETURN_IF_ERROR(
-      command_buffer->context->syms,
-      cuLaunchKernel(func, workgroup_x, workgroup_y, workgroup_z, block_size_x,
-                     block_size_y, block_size_z, 0, command_buffer->stream,
-                     command_buffer->current_descriptor, NULL),
-      "cuLaunchKernel");
+      hb_mc_device_tile_groups_execute(&command_buffer->context->hb_device),
+      "HB tile groups execute");
+
+  uint64_t cycle2 = 0;
+  hb_mc_manycore_get_cycle(command_buffer->context->hb_device.mc, &cycle2);
+  printf("HB Cycle count: %lu\n", cycle2 - cycle1);
+
   return iree_ok_status();
 }
 

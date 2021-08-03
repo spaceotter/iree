@@ -26,10 +26,6 @@ iree_status_t iree_hal_hammerblade_buffer_wrap(
 // Returns the hammerblade base pointer for the given |buffer|.
 // This is the entire allocated_buffer and must be offset by the buffer
 // byte_offset and byte_length when used.
-hb_mc_device_t *iree_hal_hammerblade_buffer_device_pointer(iree_hal_buffer_t* buffer);
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
+eva_t iree_hal_hammerblade_buffer_device_pointer(iree_hal_buffer_t* buffer);
 
 #endif  // IREE_HAL_HAMMERBLADE_BUFFER_H_

@@ -18,7 +18,7 @@
 #include "iree/schemas/hammerblade_executable_def_verifier.h"
 
 typedef struct iree_hal_hammerblade_native_executable_function_t {
-  CUfunction cu_function;
+  const char *cu_function;
   uint32_t block_size_x;
   uint32_t block_size_y;
   uint32_t block_size_z;
@@ -28,7 +28,7 @@ typedef struct iree_hal_hammerblade_native_executable_t {
   iree_hal_resource_t resource;
   iree_hal_hammerblade_context_wrapper_t* context;
   iree_host_size_t entry_count;
-  CUmodule module;
+
   iree_hal_hammerblade_native_executable_function_t entry_functions[];
 } iree_hal_hammerblade_native_executable_t;
 
@@ -58,8 +58,8 @@ iree_status_t iree_hal_hammerblade_native_executable_create(
       iree_HAMMERBLADEExecutableDef_as_root(executable_spec->executable_data.data);
 
   // Create the kernel module.
-  flatbuffers_string_t ptx_image =
-      iree_HAMMERBLADEExecutableDef_ptx_image_get(executable_def);
+  flatbuffers_string_t riscv_image =
+      iree_HAMMERBLADEExecutableDef_riscv_image_get(executable_def);
   flatbuffers_string_vec_t entry_points_vec =
       iree_HAMMERBLADEExecutableDef_entry_points_get(executable_def);
   iree_HAMMERBLADEBlockSizeDef_vec_t block_sizes_vec =
@@ -70,18 +70,15 @@ iree_status_t iree_hal_hammerblade_native_executable_create(
       entry_count * sizeof(iree_hal_hammerblade_native_executable_function_t);
   iree_status_t status = iree_allocator_malloc(context->host_allocator,
                                                total_size, (void**)&executable);
-  CUmodule module = NULL;
-  HAMMERBLADE_RETURN_IF_ERROR(context->syms,
-                       cuModuleLoadDataEx(&module, ptx_image, 0, NULL, NULL),
-                       "cuModuleLoadDataEx");
+
+  HAMMERBLADE_RETURN_IF_ERROR(hb_mc_device_program_init_binary(
+                                  &context->hb_device, "kernels", riscv_image,
+                                  strlen(riscv_image), "default_allocator", 0),
+                              "HB init binary");
 
   for (iree_host_size_t i = 0; i < entry_count; i++) {
-    CUfunction function = NULL;
     const char* entry_name = flatbuffers_string_vec_at(entry_points_vec, i);
-    HAMMERBLADE_RETURN_IF_ERROR(context->syms,
-                         cuModuleGetFunction(&function, module, entry_name),
-                         "cuModuleGetFunction");
-    executable->entry_functions[i].cu_function = function;
+    executable->entry_functions[i].cu_function = entry_name;
     executable->entry_functions[i].block_size_x = block_sizes_vec[i].x;
     executable->entry_functions[i].block_size_y = block_sizes_vec[i].y;
     executable->entry_functions[i].block_size_z = block_sizes_vec[i].z;
@@ -89,14 +86,14 @@ iree_status_t iree_hal_hammerblade_native_executable_create(
 
   iree_hal_resource_initialize(&iree_hal_hammerblade_native_executable_vtable,
                                &executable->resource);
-  executable->module = module;
+
   executable->context = context;
   *out_executable = (iree_hal_executable_t*)executable;
   IREE_TRACE_ZONE_END(z0);
   return iree_ok_status();
 }
 
-CUfunction iree_hal_hammerblade_native_executable_for_entry_point(
+const char *iree_hal_hammerblade_native_executable_for_entry_point(
     iree_hal_executable_t* base_executable, int32_t entry_point) {
   iree_hal_hammerblade_native_executable_t* executable =
       iree_hal_hammerblade_native_executable_cast(base_executable);

@@ -28,8 +28,8 @@ table HAMMERBLADEExecutableDef {
   // in HAMMERBLADE it is set by the runtime.
   block_sizes:[HAMMERBLADEBlockSizeDef];
 
-  // PTX string of the module.
-  ptx_image:string;
+  // RISCV string of the module.
+  riscv_image:string;
   
   // TODO(thomasraoux): Add potential cuBin binary specialized for some targets.
 }

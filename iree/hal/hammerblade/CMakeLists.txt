@@ -14,8 +14,6 @@ endif()
 
 iree_add_all_subdirs()
 
-set(BLADERUNNER_DIR "$ENV{HOME}/src/bsg_bladerunner" CACHE PATH "The location of the bladerunner repository")
-
 iree_cc_library(
   NAME
     hammerblade

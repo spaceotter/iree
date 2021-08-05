@@ -11,6 +11,9 @@
 #ifdef IREE_HAVE_CUDA_TARGET
 #include "iree/compiler/Dialect/HAL/Target/CUDA/CUDATarget.h"
 #endif  // IREE_HAVE_CUDA_TARGET
+#ifdef IREE_HAVE_HAMMERBLADE_TARGET
+#include "iree/compiler/Dialect/HAL/Target/HammerBlade/HBTarget.h"
+#endif  // IREE_HAVE_HAMMERBLADE_TARGET
 #ifdef IREE_HAVE_LLVMAOT_TARGET
 #include "iree/compiler/Dialect/HAL/Target/LLVM/LLVMAOTTarget.h"
 #endif  // IREE_HAVE_LLVMAOT_TARGET
@@ -40,6 +43,9 @@ void registerHALTargetBackends() {
 #ifdef IREE_HAVE_CUDA_TARGET
     IREE::HAL::registerCUDATargetBackends();
 #endif  // IREE_HAVE_CUDA_TARGET
+#ifdef IREE_HAVE_HAMMERBLADE_TARGET
+    IREE::HAL::registerHammerBladeTargetBackends();
+#endif  // IREE_HAVE_HAMMERBLADE_TARGET
 #ifdef IREE_HAVE_LLVMAOT_TARGET
     IREE::HAL::registerLLVMAOTTargetBackends(
         []() { return IREE::HAL::getLLVMTargetOptionsFromFlags(); });

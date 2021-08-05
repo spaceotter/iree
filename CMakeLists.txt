@@ -91,6 +91,8 @@ option(IREE_BUILD_EXPERIMENTAL_JAVA_BINDINGS "Builds the experimental java bindi
 option(IREE_BUILD_EXPERIMENTAL_ROCM "Builds the experimental ROCM Backend." OFF)
 option(IREE_ENABLE_NEW_INTEGRATION_TESTS "Enables new integration tests and disables old." OFF)
 
+set(BLADERUNNER_DIR "$ENV{HOME}/src/bsg_bladerunner" CACHE PATH "The location of the bladerunner repository")
+
 #-------------------------------------------------------------------------------
 # Derived flags based on primary options
 #-------------------------------------------------------------------------------
@@ -163,6 +165,7 @@ set(IREE_ALL_TARGET_BACKENDS
   ROCM
   Vulkan-SPIRV
   VMVX
+  HammerBlade
 )
 
 if(${IREE_BUILD_COMPILER})

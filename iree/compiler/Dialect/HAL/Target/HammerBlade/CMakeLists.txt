@@ -54,7 +54,7 @@ iree_cc_library(
     MLIRSupport
     MLIRTargetLLVMIRExport
     iree::base::internal::flatcc
-    iree::compiler::Codegen::LLVMGPU
+    iree::compiler::Codegen::LLVMHB
     iree::compiler::Dialect::HAL::Target
     iree::compiler::Utils
     iree::schemas::hammerblade_executable_def_c_fbs

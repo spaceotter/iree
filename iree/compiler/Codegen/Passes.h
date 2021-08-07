@@ -226,6 +226,12 @@ createLLVMGPULowerExecutableTargetPass();
 std::unique_ptr<OperationPass<FuncOp>> createLLVMGPUVectorizationPass();
 
 //------------------------------------------------------------------------------
+// LLVMHB Passes
+//------------------------------------------------------------------------------
+
+void buildLLVMHBTransformPassPipeline(OpPassManager &pm);
+
+//------------------------------------------------------------------------------
 // SPIRV Passes
 //------------------------------------------------------------------------------
 

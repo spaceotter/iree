@@ -151,7 +151,7 @@ class HBTargetBackend final : public TargetBackend {
   }
 
   void buildTranslationPassPipeline(OpPassManager &passManager) override {
-    buildLLVMGPUTransformPassPipeline(passManager, false);
+    buildLLVMHBTransformPassPipeline(passManager);
   }
 
   LogicalResult serializeExecutable(IREE::HAL::ExecutableVariantOp variantOp,
@@ -216,8 +216,8 @@ class HBTargetBackend final : public TargetBackend {
     std::unique_ptr<llvm::TargetMachine> targetMachine;
     {
       llvm::Triple triple("riscv32-unknown-elf");
-      std::string targetChip = "rv32ima";
-      std::string features = "";
+      std::string targetChip = "generic-rv32";
+      std::string features = "+m,+a";
       std::string error;
       const llvm::Target *target =
           llvm::TargetRegistry::lookupTarget("", triple, error);

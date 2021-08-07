@@ -1,0 +1,51 @@
+iree_add_all_subdirs()
+
+iree_cc_library(
+  NAME
+    LLVMHB
+  SRCS
+    "Passes.cpp"
+  DEPS
+    LLVMSupport
+    MLIRAffineToStandard
+    MLIRAnalysis
+    MLIRIR
+    MLIRLLVMCommonConversion
+    MLIRLLVMIR
+    MLIRLinalg
+    MLIRLinalgToLLVM
+    MLIRLinalgTransforms
+    MLIRMath
+    MLIRMathToLLVM
+    MLIRMathTransforms
+    MLIRMemRef
+    MLIRMemRefToLLVM
+    MLIRMemRefTransforms
+    MLIRPass
+    MLIRSCF
+    MLIRSCFToStandard
+    MLIRStandard
+    MLIRStandardOpsTransforms
+    MLIRStandardToLLVM
+    MLIRTensor
+    MLIRTosa
+    MLIRTosaToStandard
+    MLIRTransforms
+    MLIRVector
+    MLIRVectorToLLVM
+    MLIRVectorToSCF
+    iree::compiler::Codegen::Common
+    iree::compiler::Codegen::PassHeaders
+    iree::compiler::Codegen::Transforms
+    iree::compiler::Codegen::Utils
+    iree::compiler::Dialect::Flow::IR
+    iree::compiler::Dialect::HAL::IR
+    iree::compiler::Dialect::HAL::IR::HALDialect
+    iree::compiler::Dialect::IREE::IR
+    iree::compiler::Dialect::LinalgExt::Transforms
+    iree::compiler::Dialect::Shape::IR
+    iree::compiler::Dialect::Shape::Transforms
+  PUBLIC
+)
+
+### BAZEL_TO_CMAKE_PRESERVES_ALL_CONTENT_BELOW_THIS_LINE ###

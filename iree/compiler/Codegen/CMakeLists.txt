@@ -46,6 +46,7 @@ iree_cc_library(
     iree::compiler::Codegen::Common
     iree::compiler::Codegen::LLVMCPU
     iree::compiler::Codegen::LLVMGPU
+    iree::compiler::Codegen::LLVMHB
     iree::compiler::Codegen::SPIRV
   PUBLIC
 )

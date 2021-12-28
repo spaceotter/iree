@@ -30,7 +30,8 @@
 // A function to create the HAL device from the different backend targets.
 // The HAL device is returned based on the implementation, and it must be
 // released by the caller.
-iree_status_t create_device_with_static_loader(iree_hal_device_t** device) {
+iree_status_t create_device_with_static_loader(iree_allocator_t host_allocator,
+                                               iree_hal_device_t** device) {
   iree_status_t status = iree_ok_status();
   // Set paramters for the device created in the next step.
   iree_hal_sync_device_params_t params;
@@ -50,11 +51,19 @@ iree_status_t create_device_with_static_loader(iree_hal_device_t** device) {
         &library_loader);
   }
 
+  // Use the default host allocator for buffer allocations.
+  iree_string_view_t identifier = iree_make_cstring_view("sync");
+  iree_hal_allocator_t* device_allocator = NULL;
+  if (iree_status_is_ok(status)) {
+    status = iree_hal_allocator_create_heap(identifier, host_allocator,
+                                            host_allocator, &device_allocator);
+  }
+
   // Create the device and release the executor and loader afterwards.
   if (iree_status_is_ok(status)) {
     iree_hal_sync_device_create(iree_make_cstring_view("dylib"), &params,
                                 /*loader count*/ 1, &library_loader,
-                                iree_allocator_system(), device);
+                                device_allocator, host_allocator, device);
   }
   iree_hal_executable_loader_release(library_loader);
 
@@ -72,7 +81,7 @@ iree_status_t Run() {
   // Create dylib device with static loader.
   iree_hal_device_t* device = NULL;
   if (iree_status_is_ok(status)) {
-    status = create_device_with_static_loader(&device);
+    status = create_device_with_static_loader(iree_allocator_system(), &device);
   }
 
   iree_vm_module_t* hal_module = NULL;
@@ -97,8 +106,8 @@ iree_status_t Run() {
   iree_vm_context_t* context = NULL;
   iree_vm_module_t* modules[] = {hal_module, bytecode_module};
   IREE_RETURN_IF_ERROR(iree_vm_context_create_with_modules(
-      instance, &modules[0], IREE_ARRAYSIZE(modules), iree_allocator_system(),
-      &context));
+      instance, IREE_VM_CONTEXT_FLAG_NONE, &modules[0], IREE_ARRAYSIZE(modules),
+      iree_allocator_system(), &context));
   iree_vm_module_release(hal_module);
   iree_vm_module_release(bytecode_module);
 
@@ -167,7 +176,7 @@ iree_status_t Run() {
 
   // Synchronously invoke the function.
   IREE_RETURN_IF_ERROR(iree_vm_invoke(context, main_function,
-                                      /*policy=*/NULL, inputs, outputs,
+                                      IREE_VM_INVOCATION_FLAG_NONE, /*policy=*/NULL, inputs, outputs,
                                       iree_allocator_system()));
 
 

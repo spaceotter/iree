@@ -19,11 +19,11 @@ add_subdirectory(utils)
 # Enable compiler targets based on options.
 set(IREE_COMPILER_TARGETS "")
 set(IREE_COMPILER_TARGET_COPTS "")
-if("${IREE_TARGET_BACKEND_DYLIB-LLVM-AOT}" OR "${IREE_TARGET_BACKEND_WASM-LLVM-AOT}")
+if("${IREE_TARGET_BACKEND_DYLIB_LLVM_AOT}" OR "${IREE_TARGET_BACKEND_WASM_LLVM_AOT}")
   list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::LLVM)
   list(APPEND IREE_COMPILER_TARGET_COPTS "-DIREE_HAVE_LLVMAOT_TARGET")
 endif()
-if("${IREE_TARGET_BACKEND_METAL-SPIRV}")
+if("${IREE_TARGET_BACKEND_METAL_SPIRV}")
   list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::MetalSPIRV)
   list(APPEND IREE_COMPILER_TARGET_COPTS "-DIREE_HAVE_METALSPIRV_TARGET")
 endif()
@@ -31,9 +31,13 @@ if("${IREE_TARGET_BACKEND_VMVX}")
   list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::VMVX)
   list(APPEND IREE_COMPILER_TARGET_COPTS "-DIREE_HAVE_VMVX_TARGET")
 endif()
-if("${IREE_TARGET_BACKEND_VULKAN-SPIRV}")
+if("${IREE_TARGET_BACKEND_VULKAN_SPIRV}")
   list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::VulkanSPIRV)
   list(APPEND IREE_COMPILER_TARGET_COPTS "-DIREE_HAVE_VULKANSPIRV_TARGET")
+endif()
+if("${IREE_TARGET_BACKEND_WEBGPU}")
+  list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::WebGPU)
+  list(APPEND IREE_COMPILER_TARGET_COPTS "-DIREE_HAVE_WEBGPU_TARGET")
 endif()
 if("${IREE_TARGET_BACKEND_CUDA}")
   list(APPEND IREE_COMPILER_TARGETS iree::compiler::Dialect::HAL::Target::CUDA)
@@ -235,6 +239,7 @@ if(${IREE_BUILD_COMPILER})
       iree::compiler::InputConversion::Common
       iree::compiler::InputConversion::MHLO
       iree::compiler::InputConversion::TOSA
+      iree::compiler::ConstEval
       iree::compiler::Translation::IREEVM
     PUBLIC
   )

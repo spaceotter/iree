@@ -192,53 +192,55 @@ iree_benchmark_suite(
     "--task_topology_group_count=1"
 )
 
-iree_benchmark_suite(
-  MODULES
-    "${DEEPLABV3_FP32_MODULE}"
-    "${MOBILESSD_FP32_MODULE}"
-    "${POSENET_FP32_MODULE}"
-    "${MOBILEBERT_FP32_MODULE}"
-    "${MOBILENET_V2_MODULE}"
-    "${MOBILENET_V3SMALL_MODULE}"
+# TODO(#7792): Re-enable these when we are able to run different benchmarks
+# depending on use-case (presubmit, postsubmit, nightly, etc.)
+# iree_benchmark_suite(
+#   MODULES
+#     "${DEEPLABV3_FP32_MODULE}"
+#     "${MOBILESSD_FP32_MODULE}"
+#     "${POSENET_FP32_MODULE}"
+#     "${MOBILEBERT_FP32_MODULE}"
+#     "${MOBILENET_V2_MODULE}"
+#     "${MOBILENET_V3SMALL_MODULE}"
 
-  BENCHMARK_MODES
-    "2-thread,big-core,full-inference,default-flags"
-    "2-thread,little-core,full-inference,default-flags"
-  TARGET_BACKEND
-    "dylib-llvm-aot"
-  TARGET_ARCHITECTURE
-    "CPU-ARM64-v8A"
-  TRANSLATION_FLAGS
-    ${ANDROID_CPU_TRANSLATION_FLAGS}
-  DRIVER
-    "dylib"
-  RUNTIME_FLAGS
-    "--task_topology_group_count=2"
-)
+#   BENCHMARK_MODES
+#     "2-thread,big-core,full-inference,default-flags"
+#     "2-thread,little-core,full-inference,default-flags"
+#   TARGET_BACKEND
+#     "dylib-llvm-aot"
+#   TARGET_ARCHITECTURE
+#     "CPU-ARM64-v8A"
+#   TRANSLATION_FLAGS
+#     ${ANDROID_CPU_TRANSLATION_FLAGS}
+#   DRIVER
+#     "dylib"
+#   RUNTIME_FLAGS
+#     "--task_topology_group_count=2"
+# )
 
-iree_benchmark_suite(
-  MODULES
-    "${DEEPLABV3_FP32_MODULE}"
-    "${MOBILESSD_FP32_MODULE}"
-    "${POSENET_FP32_MODULE}"
-    "${MOBILEBERT_FP32_MODULE}"
-    "${MOBILENET_V2_MODULE}"
-    "${MOBILENET_V3SMALL_MODULE}"
+# iree_benchmark_suite(
+#   MODULES
+#     "${DEEPLABV3_FP32_MODULE}"
+#     "${MOBILESSD_FP32_MODULE}"
+#     "${POSENET_FP32_MODULE}"
+#     "${MOBILEBERT_FP32_MODULE}"
+#     "${MOBILENET_V2_MODULE}"
+#     "${MOBILENET_V3SMALL_MODULE}"
 
-  BENCHMARK_MODES
-    "3-thread,big-core,full-inference,default-flags"
-    "3-thread,little-core,full-inference,default-flags"
-  TARGET_BACKEND
-    "dylib-llvm-aot"
-  TARGET_ARCHITECTURE
-    "CPU-ARM64-v8A"
-  TRANSLATION_FLAGS
-    ${ANDROID_CPU_TRANSLATION_FLAGS}
-  DRIVER
-    "dylib"
-  RUNTIME_FLAGS
-    "--task_topology_group_count=3"
-)
+#   BENCHMARK_MODES
+#     "3-thread,big-core,full-inference,default-flags"
+#     "3-thread,little-core,full-inference,default-flags"
+#   TARGET_BACKEND
+#     "dylib-llvm-aot"
+#   TARGET_ARCHITECTURE
+#     "CPU-ARM64-v8A"
+#   TRANSLATION_FLAGS
+#     ${ANDROID_CPU_TRANSLATION_FLAGS}
+#   DRIVER
+#     "dylib"
+#   RUNTIME_FLAGS
+#     "--task_topology_group_count=3"
+# )
 
 iree_benchmark_suite(
   MODULES
@@ -363,11 +365,13 @@ iree_benchmark_suite(
     "CPU-ARM64-v8A"
   TRANSLATION_FLAGS
     ${ANDROID_CPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
     "--iree-llvm-loop-unrolling=true"
   DRIVER
     "dylib-sync"
 )
+
+# TODO(#7792): Consider re-enabling little-core experimental-flags if we start
+# optimizing for little cores or we can just run them occasionally
 
 # CPU, Dylib, 1 through 4 threads, big/little-core, full-inference.
 iree_benchmark_suite(
@@ -381,14 +385,13 @@ iree_benchmark_suite(
 
   BENCHMARK_MODES
     "1-thread,big-core,full-inference,experimental-flags"
-    "1-thread,little-core,full-inference,experimental-flags"
+    # "1-thread,little-core,full-inference,experimental-flags"
   TARGET_BACKEND
     "dylib-llvm-aot"
   TARGET_ARCHITECTURE
     "CPU-ARM64-v8A"
   TRANSLATION_FLAGS
     ${ANDROID_CPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
     "--iree-llvm-loop-unrolling=true"
   DRIVER
     "dylib"
@@ -396,57 +399,57 @@ iree_benchmark_suite(
     "--task_topology_group_count=1"
 )
 
-iree_benchmark_suite(
-  MODULES
-    "${DEEPLABV3_FP32_MODULE}"
-    "${MOBILESSD_FP32_MODULE}"
-    "${POSENET_FP32_MODULE}"
-    "${MOBILEBERT_FP32_MODULE}"
-    "${MOBILENET_V2_MODULE}"
-    "${MOBILENET_V3SMALL_MODULE}"
+# TODO(#7792): Re-enable these when we are able to run different benchmarks
+# depending on use-case (presubmit, postsubmit, nightly, etc.)
+# iree_benchmark_suite(
+#   MODULES
+#     "${DEEPLABV3_FP32_MODULE}"
+#     "${MOBILESSD_FP32_MODULE}"
+#     "${POSENET_FP32_MODULE}"
+#     "${MOBILEBERT_FP32_MODULE}"
+#     "${MOBILENET_V2_MODULE}"
+#     "${MOBILENET_V3SMALL_MODULE}"
 
-  BENCHMARK_MODES
-    "2-thread,big-core,full-inference,experimental-flags"
-    "2-thread,little-core,full-inference,experimental-flags"
-  TARGET_BACKEND
-    "dylib-llvm-aot"
-  TARGET_ARCHITECTURE
-    "CPU-ARM64-v8A"
-  TRANSLATION_FLAGS
-    ${ANDROID_CPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
-    "--iree-llvm-loop-unrolling=true"
-  DRIVER
-    "dylib"
-  RUNTIME_FLAGS
-    "--task_topology_group_count=2"
-)
+#   BENCHMARK_MODES
+#     "2-thread,big-core,full-inference,experimental-flags"
+#     "2-thread,little-core,full-inference,experimental-flags"
+#   TARGET_BACKEND
+#     "dylib-llvm-aot"
+#   TARGET_ARCHITECTURE
+#     "CPU-ARM64-v8A"
+#   TRANSLATION_FLAGS
+#     ${ANDROID_CPU_TRANSLATION_FLAGS}
+#     "--iree-llvm-loop-unrolling=true"
+#   DRIVER
+#     "dylib"
+#   RUNTIME_FLAGS
+#     "--task_topology_group_count=2"
+# )
 
-iree_benchmark_suite(
-  MODULES
-  "${DEEPLABV3_FP32_MODULE}"
-  "${MOBILESSD_FP32_MODULE}"
-  "${POSENET_FP32_MODULE}"
-  "${MOBILEBERT_FP32_MODULE}"
-  "${MOBILENET_V2_MODULE}"
-  "${MOBILENET_V3SMALL_MODULE}"
+# iree_benchmark_suite(
+#   MODULES
+#   "${DEEPLABV3_FP32_MODULE}"
+#   "${MOBILESSD_FP32_MODULE}"
+#   "${POSENET_FP32_MODULE}"
+#   "${MOBILEBERT_FP32_MODULE}"
+#   "${MOBILENET_V2_MODULE}"
+#   "${MOBILENET_V3SMALL_MODULE}"
 
-  BENCHMARK_MODES
-    "3-thread,big-core,full-inference,experimental-flags"
-    "3-thread,little-core,full-inference,experimental-flags"
-  TARGET_BACKEND
-    "dylib-llvm-aot"
-  TARGET_ARCHITECTURE
-    "CPU-ARM64-v8A"
-  TRANSLATION_FLAGS
-    ${ANDROID_CPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
-    "--iree-llvm-loop-unrolling=true"
-  DRIVER
-    "dylib"
-  RUNTIME_FLAGS
-    "--task_topology_group_count=3"
-)
+#   BENCHMARK_MODES
+#     "3-thread,big-core,full-inference,experimental-flags"
+#     "3-thread,little-core,full-inference,experimental-flags"
+#   TARGET_BACKEND
+#     "dylib-llvm-aot"
+#   TARGET_ARCHITECTURE
+#     "CPU-ARM64-v8A"
+#   TRANSLATION_FLAGS
+#     ${ANDROID_CPU_TRANSLATION_FLAGS}
+#     "--iree-llvm-loop-unrolling=true"
+#   DRIVER
+#     "dylib"
+#   RUNTIME_FLAGS
+#     "--task_topology_group_count=3"
+# )
 
 iree_benchmark_suite(
   MODULES
@@ -459,14 +462,13 @@ iree_benchmark_suite(
 
   BENCHMARK_MODES
     "4-thread,big-core,full-inference,experimental-flags"
-    "4-thread,little-core,full-inference,experimental-flags"
+    # "4-thread,little-core,full-inference,experimental-flags"
   TARGET_BACKEND
     "dylib-llvm-aot"
   TARGET_ARCHITECTURE
     "CPU-ARM64-v8A"
   TRANSLATION_FLAGS
     ${ANDROID_CPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
     "--iree-llvm-loop-unrolling=true"
   DRIVER
     "dylib"
@@ -493,7 +495,6 @@ iree_benchmark_suite(
     "CPU-ARM64-v8A"
   TRANSLATION_FLAGS
     "--iree-input-type=tosa"
-    "--iree-flow-inline-constants-max-byte-length=2048"
   DRIVER
     "vmvx"
   RUNTIME_FLAGS
@@ -519,7 +520,6 @@ iree_benchmark_suite(
     "GPU-Adreno"
   TRANSLATION_FLAGS
     ${ANDROID_ADRENO_GPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
     "--iree-enable-fusion-with-reduction-ops"
   DRIVER
     "vulkan"
@@ -543,7 +543,6 @@ iree_benchmark_suite(
     "GPU-Mali-Valhall"
   TRANSLATION_FLAGS
     ${ANDROID_MALI_GPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=16"
     "--iree-enable-fusion-with-reduction-ops"
   DRIVER
     "vulkan"
@@ -563,7 +562,6 @@ iree_benchmark_suite(
     "--iree-input-type=tosa"
     "--iree-flow-demote-f32-to-f16"
     "--iree-vulkan-target-triple=valhall-unknown-android11"
-    "--iree-flow-inline-constants-max-byte-length=16"
     "--iree-enable-fusion-with-reduction-ops"
   DRIVER
     "vulkan"
@@ -599,7 +597,6 @@ iree_benchmark_suite(
     "GPU-Adreno"
   TRANSLATION_FLAGS
     ${ANDROID_ADRENO_GPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=2048"
     "--iree-enable-fusion-with-reduction-ops"
     "--iree-hal-benchmark-dispatch-repeat-count=16"
   DRIVER
@@ -626,7 +623,6 @@ iree_benchmark_suite(
     "GPU-Mali-Valhall"
   TRANSLATION_FLAGS
     ${ANDROID_MALI_GPU_TRANSLATION_FLAGS}
-    "--iree-flow-inline-constants-max-byte-length=16"
     "--iree-enable-fusion-with-reduction-ops"
     "--iree-hal-benchmark-dispatch-repeat-count=32"
   DRIVER
@@ -649,7 +645,6 @@ iree_benchmark_suite(
     "--iree-input-type=tosa"
     "--iree-flow-demote-f32-to-f16"
     "--iree-vulkan-target-triple=valhall-unknown-android11"
-    "--iree-flow-inline-constants-max-byte-length=16"
     "--iree-enable-fusion-with-reduction-ops"
     "--iree-hal-benchmark-dispatch-repeat-count=32"
   DRIVER

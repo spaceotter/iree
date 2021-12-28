@@ -27,7 +27,9 @@ typedef struct iree_hal_vulkan_vma_allocator_t {
   IREE_STATISTICS(iree_hal_allocator_statistics_t statistics;)
 } iree_hal_vulkan_vma_allocator_t;
 
+namespace {
 extern const iree_hal_allocator_vtable_t iree_hal_vulkan_vma_allocator_vtable;
+}  // namespace
 
 static iree_hal_vulkan_vma_allocator_t* iree_hal_vulkan_vma_allocator_cast(
     iree_hal_allocator_t* base_value) {
@@ -352,6 +354,13 @@ static iree_status_t iree_hal_vulkan_vma_allocator_wrap_buffer(
                           "wrapping of external buffers not supported");
 }
 
+static void iree_hal_vulkan_vma_allocator_deallocate_buffer(
+    iree_hal_allocator_t* base_allocator, iree_hal_buffer_t* base_buffer) {
+  // VMA does the pooling for us so we don't need anything special.
+  iree_hal_buffer_destroy(base_buffer);
+}
+
+namespace {
 const iree_hal_allocator_vtable_t iree_hal_vulkan_vma_allocator_vtable = {
     /*.destroy=*/iree_hal_vulkan_vma_allocator_destroy,
     /*.host_allocator=*/iree_hal_vulkan_vma_allocator_host_allocator,
@@ -360,4 +369,6 @@ const iree_hal_allocator_vtable_t iree_hal_vulkan_vma_allocator_vtable = {
     iree_hal_vulkan_vma_allocator_query_buffer_compatibility,
     /*.allocate_buffer=*/iree_hal_vulkan_vma_allocator_allocate_buffer,
     /*.wrap_buffer=*/iree_hal_vulkan_vma_allocator_wrap_buffer,
+    /*.deallocate_buffer=*/iree_hal_vulkan_vma_allocator_deallocate_buffer,
 };
+}  // namespace

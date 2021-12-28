@@ -23,7 +23,9 @@ typedef struct iree_hal_vulkan_vma_buffer_t {
   VmaAllocationInfo allocation_info;
 } iree_hal_vulkan_vma_buffer_t;
 
+namespace {
 extern const iree_hal_buffer_vtable_t iree_hal_vulkan_vma_buffer_vtable;
+}  // namespace
 
 static iree_hal_vulkan_vma_buffer_t* iree_hal_vulkan_vma_buffer_cast(
     iree_hal_buffer_t* base_value) {
@@ -45,21 +47,16 @@ iree_status_t iree_hal_vulkan_vma_buffer_wrap(
   IREE_ASSERT_ARGUMENT(out_buffer);
   IREE_TRACE_ZONE_BEGIN(z0);
 
+  iree_allocator_t host_allocator =
+      iree_hal_allocator_host_allocator(allocator);
   iree_hal_vulkan_vma_buffer_t* buffer = NULL;
   iree_status_t status =
-      iree_allocator_malloc(iree_hal_allocator_host_allocator(allocator),
-                            sizeof(*buffer), (void**)&buffer);
+      iree_allocator_malloc(host_allocator, sizeof(*buffer), (void**)&buffer);
   if (iree_status_is_ok(status)) {
-    iree_hal_resource_initialize(&iree_hal_vulkan_vma_buffer_vtable,
-                                 &buffer->base.resource);
-    buffer->base.allocator = allocator;
-    buffer->base.allocated_buffer = &buffer->base;
-    buffer->base.allocation_size = allocation_size;
-    buffer->base.byte_offset = byte_offset;
-    buffer->base.byte_length = byte_length;
-    buffer->base.memory_type = memory_type;
-    buffer->base.allowed_access = allowed_access;
-    buffer->base.allowed_usage = allowed_usage;
+    iree_hal_buffer_initialize(
+        host_allocator, allocator, &buffer->base, allocation_size, byte_offset,
+        byte_length, memory_type, allowed_access, allowed_usage,
+        &iree_hal_vulkan_vma_buffer_vtable, &buffer->base);
     buffer->vma = vma;
     buffer->handle = handle;
     buffer->allocation = allocation;
@@ -85,8 +82,7 @@ iree_status_t iree_hal_vulkan_vma_buffer_wrap(
 static void iree_hal_vulkan_vma_buffer_destroy(iree_hal_buffer_t* base_buffer) {
   iree_hal_vulkan_vma_buffer_t* buffer =
       iree_hal_vulkan_vma_buffer_cast(base_buffer);
-  iree_allocator_t host_allocator =
-      iree_hal_allocator_host_allocator(iree_hal_buffer_allocator(base_buffer));
+  iree_allocator_t host_allocator = base_buffer->host_allocator;
   IREE_TRACE_ZONE_BEGIN(z0);
 
   // IREE_TRACE_FREE_NAMED("VMA", (void*)buffer->handle);
@@ -161,6 +157,7 @@ static iree_status_t iree_hal_vulkan_vma_buffer_flush_range(
   return iree_ok_status();
 }
 
+namespace {
 const iree_hal_buffer_vtable_t iree_hal_vulkan_vma_buffer_vtable = {
     /*.destroy=*/iree_hal_vulkan_vma_buffer_destroy,
     /*.map_range=*/iree_hal_vulkan_vma_buffer_map_range,
@@ -168,3 +165,4 @@ const iree_hal_buffer_vtable_t iree_hal_vulkan_vma_buffer_vtable = {
     /*.invalidate_range=*/iree_hal_vulkan_vma_buffer_invalidate_range,
     /*.flush_range=*/iree_hal_vulkan_vma_buffer_flush_range,
 };
+}  // namespace

@@ -130,21 +130,23 @@ iree_status_t Run() {
   iree_hal_memory_type_t input_memory_type =
       IREE_HAL_MEMORY_TYPE_HOST_LOCAL | IREE_HAL_MEMORY_TYPE_DEVICE_VISIBLE;
   if (iree_status_is_ok(status)) {
-    status = iree_hal_buffer_view_clone_heap_buffer(
+    status = iree_hal_buffer_view_wrap_or_clone_heap_buffer(
         iree_hal_device_allocator(device), shape, IREE_ARRAYSIZE(shape),
         IREE_HAL_ELEMENT_TYPE_FLOAT_32, IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
-        input_memory_type, IREE_HAL_BUFFER_USAGE_ALL,
-        iree_make_const_byte_span((void*)kFloat4,
+        input_memory_type, IREE_HAL_MEMORY_ACCESS_ANY, IREE_HAL_BUFFER_USAGE_ALL,
+        iree_make_byte_span((void*)kFloat4,
                                   sizeof(float) * kElementCount),
+        iree_allocator_null(),
         &arg0_buffer_view);
   }
   if (iree_status_is_ok(status)) {
-    status = iree_hal_buffer_view_clone_heap_buffer(
+    status = iree_hal_buffer_view_wrap_or_clone_heap_buffer(
         iree_hal_device_allocator(device), shape, IREE_ARRAYSIZE(shape),
         IREE_HAL_ELEMENT_TYPE_FLOAT_32, IREE_HAL_ENCODING_TYPE_DENSE_ROW_MAJOR,
-        input_memory_type, IREE_HAL_BUFFER_USAGE_ALL,
-        iree_make_const_byte_span((void*)kFloat2,
+        input_memory_type, IREE_HAL_MEMORY_ACCESS_ANY, IREE_HAL_BUFFER_USAGE_ALL,
+        iree_make_byte_span((void*)kFloat2,
                                   sizeof(float) * kElementCount),
+        iree_allocator_null(),
         &arg1_buffer_view);
   }
 
@@ -195,6 +197,7 @@ iree_status_t Run() {
   if (iree_status_is_ok(status)) {
     status = iree_hal_buffer_map_range(
         iree_hal_buffer_view_buffer(ret_buffer_view),
+        IREE_HAL_MAPPING_MODE_PERSISTENT,
         IREE_HAL_MEMORY_ACCESS_READ, 0, IREE_WHOLE_BUFFER, &mapped_memory);
   }
   if (iree_status_is_ok(status)) {

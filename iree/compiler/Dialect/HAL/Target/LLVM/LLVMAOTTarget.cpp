@@ -331,25 +331,6 @@ class LLVMAOTTargetBackend final : public TargetBackend {
       }
     }
 
-    // Link the generated object files into a dylib.
-    auto linkArtifactsOr =
-        linkerTool->linkDynamicLibrary(libraryName, objectFiles);
-    if (!linkArtifactsOr.hasValue()) {
-      return mlir::emitError(variantOp.getLoc())
-             << "failed to link executable and generate target dylib using "
-                "linker toolchain "
-             << linkerTool->getToolPath();
-    }
-    auto &linkArtifacts = linkArtifactsOr.getValue();
-    if (options_.keepLinkerArtifacts) {
-      mlir::emitRemark(variantOp.getLoc())
-          << "linker artifacts for " << variantOp.getName() << " preserved:\n"
-          << "    " << linkArtifacts.libraryFile.path;
-      linkArtifacts.keepAllFiles();
-      for (auto &objectFile : objectFiles) {
-        objectFile.outputFile->keep();
-      }
-    }
 
     if (options_.linkStatic) {
       // Embed the library name in the executable binary op. This informs the
@@ -360,6 +341,25 @@ class LLVMAOTTargetBackend final : public TargetBackend {
           variantOp.getLoc(), variantOp.sym_name(), "static",
           libraryNameVector);
     } else if (options_.linkEmbedded) {
+      // Link the generated object files into a dylib.
+      auto linkArtifactsOr =
+          linkerTool->linkDynamicLibrary(libraryName, objectFiles);
+      if (!linkArtifactsOr.hasValue()) {
+        return mlir::emitError(variantOp.getLoc())
+              << "failed to link executable and generate target dylib using "
+                  "linker toolchain "
+              << linkerTool->getToolPath();
+      }
+      auto &linkArtifacts = linkArtifactsOr.getValue();
+      if (options_.keepLinkerArtifacts) {
+        mlir::emitRemark(variantOp.getLoc())
+            << "linker artifacts for " << variantOp.getName() << " preserved:\n"
+            << "    " << linkArtifacts.libraryFile.path;
+        linkArtifacts.keepAllFiles();
+        for (auto &objectFile : objectFiles) {
+          objectFile.outputFile->keep();
+        }
+      }
       // Load the linked ELF file and pack into an attr.
       auto elfFile = linkArtifacts.libraryFile.read();
       if (!elfFile.hasValue()) {
@@ -381,6 +381,25 @@ class LLVMAOTTargetBackend final : public TargetBackend {
     } else {
       FlatbufferBuilder builder;
       iree_DyLibExecutableDef_start_as_root(builder);
+      // Link the generated object files into a dylib.
+      auto linkArtifactsOr =
+          linkerTool->linkDynamicLibrary(libraryName, objectFiles);
+      if (!linkArtifactsOr.hasValue()) {
+        return mlir::emitError(variantOp.getLoc())
+              << "failed to link executable and generate target dylib using "
+                  "linker toolchain "
+              << linkerTool->getToolPath();
+      }
+      auto &linkArtifacts = linkArtifactsOr.getValue();
+      if (options_.keepLinkerArtifacts) {
+        mlir::emitRemark(variantOp.getLoc())
+            << "linker artifacts for " << variantOp.getName() << " preserved:\n"
+            << "    " << linkArtifacts.libraryFile.path;
+        linkArtifacts.keepAllFiles();
+        for (auto &objectFile : objectFiles) {
+          objectFile.outputFile->keep();
+        }
+      }
 
       // Embed debug symbols at the end of the flatbuffer by adding first in the
       // bottoms-up builder.
